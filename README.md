@@ -4,7 +4,7 @@ easycache is exactly what it sounds like, an easy to use cache that will automat
 
 Example:
 
-```
+```go
 fun fetchUserFromDB(key any) any {
     var user User
     db.Find(&user, key)
