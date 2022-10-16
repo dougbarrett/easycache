@@ -7,7 +7,7 @@ import (
 
 func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 	type l struct {
-		list any
+		data any
 		ttl  time.Time
 		sync.RWMutex
 	}
@@ -28,7 +28,7 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			lcp.ttl = time.Now().Add(ttl)
 			lcp.Unlock()
 		}
-		lc.list = fn(key)
+		lc.data = fn(key)
 		c.Lock()
 		lc.ttl = time.Now().Add(ttl)
 		c.list[key] = &lc
@@ -42,10 +42,10 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			if time.Now().After(val.ttl) {
 				go c.update(key)
 			}
-			return val.list, nil
+			return val.data, nil
 		}
 
 		c.update(key)
-		return c.list[key].list, nil
+		return c.list[key].data, nil
 	}
 }
