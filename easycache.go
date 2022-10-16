@@ -42,10 +42,14 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			if time.Now().After(val.ttl) {
 				go c.update(key)
 			}
+			val.RLock()
+			defer val.RUnlock()
 			return val.data, nil
 		}
 
 		c.update(key)
+		val.RLock()
+		defer val.RUnlock()
 		return c.list[key].data, nil
 	}
 }
