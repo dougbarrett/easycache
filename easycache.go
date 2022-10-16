@@ -7,9 +7,8 @@ import (
 
 func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 	type l struct {
-		ilr          any
-		ttl          time.Time
-		beingUpdated bool
+		list any
+		ttl  time.Time
 		sync.RWMutex
 	}
 	type cache struct {
@@ -29,7 +28,7 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			lcp.ttl = time.Now().Add(ttl)
 			lcp.Unlock()
 		}
-		lc.ilr = fn(key)
+		lc.list = fn(key)
 		c.Lock()
 		lc.ttl = time.Now().Add(ttl)
 		c.list[key] = &lc
@@ -43,10 +42,10 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			if time.Now().After(val.ttl) {
 				go c.update(key)
 			}
-			return val.ilr, nil
+			return val.list, nil
 		}
 
 		c.update(key)
-		return c.list[key].ilr, nil
+		return c.list[key].list, nil
 	}
 }
