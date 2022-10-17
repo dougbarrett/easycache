@@ -49,11 +49,12 @@ func (c *cache) update(key any) {
 	c.originLock.Lock()
 	defer c.originLock.Unlock()
 	var lc l
-	lcp, ok := c.list[key]
+	_, ok := c.list[key]
 	if ok {
-		lcp.Lock()
-		defer lcp.Unlock()
-		lcp._ttl = time.Now().Add(c.getTTL())
+		c.Lock()
+		c.list[key]._ttl = time.Now().Add(c.getTTL())
+		c.Unlock()
+
 	}
 	lc.data = c.origin(key)
 	lc._ttl = time.Now().Add(c.getTTL())
