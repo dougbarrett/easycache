@@ -33,7 +33,7 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New(tt.args.ttl, tt.args.fn)
 
-			want, err := c(tt.key)
+			want, err := c.Get(tt.key)
 
 			if err != nil {
 				t.Errorf("New() error = %v, wantErr %v", err, nil)
