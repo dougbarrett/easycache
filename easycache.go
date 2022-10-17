@@ -33,6 +33,8 @@ func New(ttl time.Duration, fn func(key any) any) Cache {
 }
 
 func (c *cache) update(key any) {
+	c.originLock.Lock()
+	defer c.originLock.Unlock()
 	var lc l
 	lcp, ok := c.list[key]
 	if ok {
@@ -40,9 +42,7 @@ func (c *cache) update(key any) {
 		defer lcp.Unlock()
 		lcp.ttl = time.Now().Add(c.ttl)
 	}
-	c.originLock.Lock()
 	lc.data = c.origin(key)
-	c.originLock.Unlock()
 	c.Lock()
 	lc.ttl = time.Now().Add(c.ttl)
 	c.list[key] = &lc
