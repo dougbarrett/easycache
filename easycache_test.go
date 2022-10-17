@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "happy path",
 			args: args{
-				ttl: 1 * time.Second,
+				ttl: 10 * time.Second,
 				fn: func(key any) any {
 					return fmt.Sprintf("happy path %s", key)
 				},
@@ -42,6 +42,18 @@ func TestNew(t *testing.T) {
 
 			if tt.expected != want {
 				t.Errorf("New() = %v, want %v", want, tt.expected)
+			}
+			want, err = c.Get(tt.key)
+
+			if err != nil {
+				t.Errorf("New() error = %v, wantErr %v", err, nil)
+				return
+			}
+			want, err = c.Get(tt.key)
+
+			if err != nil {
+				t.Errorf("New() error = %v, wantErr %v", err, nil)
+				return
 			}
 
 		})

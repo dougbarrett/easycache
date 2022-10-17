@@ -38,6 +38,7 @@ func (c *cache) getTTL() time.Duration {
 func New(ttl time.Duration, fn func(key any) any) Cache {
 	var c = cache{
 		origin: fn,
+		_ttl:   ttl,
 	}
 
 	c.list = make(map[any]*l)
