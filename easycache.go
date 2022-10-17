@@ -15,6 +15,7 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 		list   map[any]*l
 		update func(key any)
 		sync.RWMutex
+		originLock sync.RWMutex
 	}
 	var c = cache{}
 
@@ -28,7 +29,9 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 			lcp.ttl = time.Now().Add(ttl)
 			lcp.Unlock()
 		}
+		c.originLock.Lock()
 		lc.data = fn(key)
+		c.originLock.Unlock()
 		c.Lock()
 		lc.ttl = time.Now().Add(ttl)
 		c.list[key] = &lc
@@ -48,8 +51,9 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 		}
 
 		c.update(key)
+		val, _ = c.list[key]
 		val.RLock()
 		defer val.RUnlock()
-		return c.list[key].data, nil
+		return val.data, nil
 	}
 }
