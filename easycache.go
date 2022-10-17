@@ -53,7 +53,9 @@ func (c *cache) update(key any) {
 }
 
 func (c *cache) Get(key any) (any, error) {
+	c.RLock()
 	val, ok := c.list[key]
+	c.RUnlock()
 
 	if ok {
 		if time.Now().After(val.ttl) {
