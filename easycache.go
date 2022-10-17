@@ -44,9 +44,12 @@ func (c *cache) update(key any) {
 	}
 	lc.data = c.origin(key)
 	c.Lock()
+	defer c.Unlock()
+	lc.Lock()
+	defer lc.Unlock()
 	lc.ttl = time.Now().Add(c.ttl)
 	c.list[key] = &lc
-	c.Unlock()
+
 }
 
 func (c *cache) Get(key any) (any, error) {
