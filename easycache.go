@@ -11,15 +11,28 @@ type Cache interface {
 
 type l struct {
 	data any
-	ttl  time.Time
+	_ttl time.Time
 	sync.RWMutex
 }
+
+func (l *l) getTTL() time.Time {
+	l.RLock()
+	defer l.RUnlock()
+	return l._ttl
+}
+
 type cache struct {
 	list map[any]*l
 	sync.RWMutex
 	originLock sync.RWMutex
 	origin     func(key any) any
-	ttl        time.Duration
+	_ttl       time.Duration
+}
+
+func (c *cache) getTTL() time.Duration {
+	c.RLock()
+	defer c.RUnlock()
+	return c._ttl
 }
 
 func New(ttl time.Duration, fn func(key any) any) Cache {
@@ -40,14 +53,14 @@ func (c *cache) update(key any) {
 	if ok {
 		lcp.Lock()
 		defer lcp.Unlock()
-		lcp.ttl = time.Now().Add(c.ttl)
+		lcp._ttl = time.Now().Add(c.getTTL())
 	}
 	lc.data = c.origin(key)
+	lc._ttl = time.Now().Add(c.getTTL())
 	c.Lock()
 	defer c.Unlock()
 	lc.Lock()
 	defer lc.Unlock()
-	lc.ttl = time.Now().Add(c.ttl)
 	c.list[key] = &lc
 
 }
@@ -58,7 +71,7 @@ func (c *cache) Get(key any) (any, error) {
 	c.RUnlock()
 
 	if ok {
-		if time.Now().After(val.ttl) {
+		if time.Now().After(val.getTTL()) {
 			go c.update(key)
 		}
 		c.RLock()
