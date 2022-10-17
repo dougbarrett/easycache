@@ -56,14 +56,14 @@ func (c *cache) Get(key any) (any, error) {
 		if time.Now().After(val.ttl) {
 			go c.update(key)
 		}
-		val.RLock()
-		defer val.RUnlock()
+		c.RLock()
+		defer c.RUnlock()
 		return val.data, nil
 	}
 
 	c.update(key)
 	val, _ = c.list[key]
-	val.RLock()
-	defer val.RUnlock()
+	c.RLock()
+	defer c.RUnlock()
 	return val.data, nil
 }
