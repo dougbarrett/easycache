@@ -26,16 +26,16 @@ func New(ttl time.Duration, fn func(key any) any) func(key any) (any, error) {
 		lcp, ok := c.list[key]
 		if ok {
 			lcp.Lock()
+			defer lcp.Unlock()
 			lcp.ttl = time.Now().Add(ttl)
-			lcp.Unlock()
 		}
-		c.originLock.Lock()
+		// c.originLock.Lock()
 		lc.data = fn(key)
-		c.originLock.Unlock()
-		c.Lock()
+		// c.originLock.Unlock()
+		// c.Lock()
 		lc.ttl = time.Now().Add(ttl)
 		c.list[key] = &lc
-		c.Unlock()
+		// c.Unlock()
 	}
 
 	return func(key any) (any, error) {
