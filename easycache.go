@@ -43,7 +43,23 @@ func New(ttl time.Duration, fn func(key any) any) Cache {
 
 	c.list = make(map[any]*l)
 
+	go c.runner()
+
 	return &c
+}
+
+func (c *cache) runner() {
+
+	ticker := time.NewTicker(c._ttl)
+	for range ticker.C {
+		for k, v := range c.list {
+			if v.getTTL().Before(time.Now().Add(-(5 * c._ttl))) {
+				c.Lock()
+				delete(c.list, k)
+				c.Unlock()
+			}
+		}
+	}
 }
 
 func (c *cache) update(key any) {

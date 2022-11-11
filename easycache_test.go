@@ -56,6 +56,8 @@ func TestNew(t *testing.T) {
 				return
 			}
 
+			time.Sleep(tt.args.ttl * 6)
+
 		})
 	}
 }
