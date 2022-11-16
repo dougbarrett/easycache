@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 		{
 			name: "happy path",
 			args: args{
-				ttl: 10 * time.Second,
+				ttl: 2 * time.Second,
 				fn: func(key any) any {
 					return fmt.Sprintf("happy path %s", key)
 				},
@@ -29,7 +29,8 @@ func TestNew(t *testing.T) {
 			expected: "happy path 1",
 		},
 	}
-	for _, tt := range tests {
+	for i := range tests {
+		tt := tests[i]
 		t.Run(tt.name, func(t *testing.T) {
 			c := New(tt.args.ttl, tt.args.fn)
 

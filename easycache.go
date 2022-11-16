@@ -13,20 +13,14 @@ type l struct {
 	data any
 	_ttl time.Time
 	sync.RWMutex
-}
-
-func (l *l) getTTL() time.Time {
-	l.RLock()
-	defer l.RUnlock()
-	return l._ttl
+	done chan bool
 }
 
 type cache struct {
-	list map[any]*l
+	list   map[any]*l
+	origin func(key any) any
+	_ttl   time.Duration
 	sync.RWMutex
-	originLock sync.RWMutex
-	origin     func(key any) any
-	_ttl       time.Duration
 }
 
 func (c *cache) getTTL() time.Duration {
@@ -50,11 +44,20 @@ func New(ttl time.Duration, fn func(key any) any) Cache {
 
 func (c *cache) runner() {
 
-	ticker := time.NewTicker(c._ttl)
+	cacheTTL := c._ttl
+	ticker := time.NewTicker(cacheTTL)
 	for range ticker.C {
-		for i := range c.list { // rance condition panic
-			v := c.list[i]
-			if v.getTTL().Before(time.Now().Add(-(5 * c._ttl))) {
+		count := len(c.list)
+		for i := 0; i < count; i++ { // rance condition panic
+			v, ok := c.list[i]
+
+			if !ok {
+				continue
+			}
+			v.RLock()
+			ttl := v._ttl
+			v.RUnlock()
+			if ttl.Before(time.Now().Add(-(5 * cacheTTL))) {
 				c.Lock()
 				delete(c.list, i)
 				c.Unlock()
@@ -64,24 +67,22 @@ func (c *cache) runner() {
 }
 
 func (c *cache) update(key any) {
-	c.originLock.Lock()
-	defer c.originLock.Unlock()
-	var lc l
-	_, ok := c.list[key]
-	if ok {
-		c.list[key].Lock()
-		c.list[key]._ttl = time.Now().Add(c.getTTL())
-		c.list[key].Unlock()
-
+	chc, ok := c.list[key]
+	if !ok {
+		chc = &l{}
+		c.Lock()
+		c.list[key] = chc
+		c.Unlock()
 	}
-	lc.data = c.origin(key)
-	lc._ttl = time.Now().Add(c.getTTL())
-	c.Lock()
-	defer c.Unlock()
-	lc.Lock()
-	defer lc.Unlock()
-	c.list[key] = &lc
+	chc.Lock()
+	chc.done = make(chan bool)
+	chc._ttl = time.Now().Add(c.getTTL())
+	chc.Unlock()
 
+	chc.Lock()
+	defer chc.Unlock()
+	chc.data = c.origin(key)
+	chc._ttl = time.Now().Add(c.getTTL())
 }
 
 func (c *cache) Get(key any) (any, error) {
@@ -90,17 +91,20 @@ func (c *cache) Get(key any) (any, error) {
 	c.RUnlock()
 
 	if ok {
-		if time.Now().After(val.getTTL()) {
+		val.RLock()
+		vTTL := val._ttl
+		val.RUnlock()
+		if time.Now().After(vTTL) {
 			go c.update(key)
 		}
-		c.RLock()
-		defer c.RUnlock()
+		val.RLock()
+		defer val.RUnlock()
 		return val.data, nil
 	}
 
 	c.update(key)
 	val, _ = c.list[key]
-	c.RLock()
-	defer c.RUnlock()
+	val.RLock()
+	defer val.RUnlock()
 	return val.data, nil
 }
