@@ -43,7 +43,7 @@ func New(ttl time.Duration, fn func(key any) any) Cache {
 
 	c.list = make(map[any]*l)
 
-	go c.runner()
+	go c.runner() // race condition panic
 
 	return &c
 }
@@ -52,10 +52,11 @@ func (c *cache) runner() {
 
 	ticker := time.NewTicker(c._ttl)
 	for range ticker.C {
-		for k, v := range c.list {
+		for i := range c.list { // rance condition panic
+			v := c.list[i]
 			if v.getTTL().Before(time.Now().Add(-(5 * c._ttl))) {
 				c.Lock()
-				delete(c.list, k)
+				delete(c.list, i)
 				c.Unlock()
 			}
 		}
