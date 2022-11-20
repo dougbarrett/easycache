@@ -74,11 +74,14 @@ func (c *service) Get(key string, data any) (any, error) {
 
 	if ok {
 		c.ttlRW.Lock()
-		vTTL := c.ttl[key]
-		c.ttlRW.Unlock()
-		if time.Now().After(vTTL) {
-			go c.update(key, data)
+		vTTL, ttlOK := c.ttl[key]
+		if ttlOK {
+			c.ttlRW.Unlock()
+			if time.Now().After(vTTL) {
+				go c.update(key, data)
+			}
 		}
+
 		return cacheData, nil
 	}
 
