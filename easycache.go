@@ -2,7 +2,6 @@ package easycache
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -10,13 +9,13 @@ import (
 )
 
 type Cache interface {
-	Get(key any) (any, error)
+	Get(key string, req any) (any, error)
 }
 
 type service struct {
 	origin func(key any) any
 	cache  *cache.Cache
-	ttl    map[any]time.Time
+	ttl    map[string]time.Time
 	keyTTL time.Duration
 	ttlRW  sync.RWMutex
 }
@@ -29,7 +28,7 @@ func New(ttl time.Duration, fn func(key any) any) Cache {
 		cache:  c,
 	}
 
-	s.ttl = make(map[any]time.Time)
+	s.ttl = make(map[string]time.Time)
 	s.keyTTL = ttl
 
 	go s.runner() // race condition panic
@@ -41,7 +40,7 @@ func (c *service) runner() {
 	ticker := time.NewTicker(c.keyTTL)
 	for range ticker.C {
 		c.ttlRW.RLock()
-		ttlMap := make(map[any]time.Time)
+		ttlMap := make(map[string]time.Time)
 		for k, v := range c.ttl {
 			ttlMap[k] = v
 		}
@@ -52,39 +51,39 @@ func (c *service) runner() {
 			ttl := ttlMap[i]
 
 			if ttl.Add(c.keyTTL).Before(time.Now()) {
-				c.cache.Delete(fmt.Sprintf("%v", i))
+				c.cache.Delete(i)
 			}
 		}
 	}
 }
 
-func (c *service) update(key any) {
+func (c *service) update(key string, data any) {
 	c.ttlRW.Lock()
 	c.ttl[key] = time.Now().Add(c.keyTTL)
 	c.ttlRW.Unlock()
 
-	data := c.origin(key)
-	c.cache.Set(fmt.Sprintf("%v", key), data, cache.NoExpiration)
+	retData := c.origin(data)
+	c.cache.Set(key, retData, cache.NoExpiration)
 }
 
-func (c *service) Get(key any) (any, error) {
-	data, ok := c.cache.Get(fmt.Sprintf("%v", key))
+func (c *service) Get(key string, data any) (any, error) {
+	cacheData, ok := c.cache.Get(key)
 
 	if ok {
 		c.ttlRW.Lock()
 		vTTL := c.ttl[key]
 		c.ttlRW.Unlock()
 		if time.Now().After(vTTL) {
-			go c.update(key)
+			go c.update(key, data)
 		}
-		return data, nil
+		return cacheData, nil
 	}
 
-	c.update(key)
+	c.update(key, data)
 
-	data, ok = c.cache.Get(fmt.Sprintf("%v", key))
+	cacheData, ok = c.cache.Get(key)
 	if !ok {
 		return nil, errors.New("error fetching cache")
 	}
-	return data, nil
+	return cacheData, nil
 }

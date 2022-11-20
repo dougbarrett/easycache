@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		key      any
+		key      string
 		expected string
 	}{
 		{
@@ -34,7 +34,7 @@ func TestNew(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := New(tt.args.ttl, tt.args.fn)
 
-			want, err := c.Get(tt.key)
+			want, err := c.Get(tt.key, tt.key)
 
 			if err != nil {
 				t.Errorf("New() error = %v, wantErr %v", err, nil)
@@ -44,13 +44,13 @@ func TestNew(t *testing.T) {
 			if tt.expected != want {
 				t.Errorf("New() = %v, want %v", want, tt.expected)
 			}
-			want, err = c.Get(tt.key)
+			want, err = c.Get(tt.key, tt.key)
 
 			if err != nil {
 				t.Errorf("New() error = %v, wantErr %v", err, nil)
 				return
 			}
-			want, err = c.Get(tt.key)
+			want, err = c.Get(tt.key, tt.key)
 
 			if err != nil {
 				t.Errorf("New() error = %v, wantErr %v", err, nil)
