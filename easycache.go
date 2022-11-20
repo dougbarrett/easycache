@@ -52,6 +52,9 @@ func (c *service) runner() {
 
 			if ttl.Add(c.keyTTL).Before(time.Now()) {
 				c.cache.Delete(i)
+				c.ttlRW.Lock()
+				delete(c.ttl, i)
+				c.ttlRW.Unlock()
 			}
 		}
 	}
